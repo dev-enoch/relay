@@ -46,7 +46,7 @@ export class JobsService {
           data: {
             type: 'JOB_CREATED',
             aggregate_id: createdJob.id,
-            payload: { jobId: createdJob.id } as Prisma.InputJsonValue,
+            payload: { jobId: createdJob.id, maxAttempts: createdJob.max_attempts } as Prisma.InputJsonValue,
             dispatch_status: 'PENDING',
           },
         });

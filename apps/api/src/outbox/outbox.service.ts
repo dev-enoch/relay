@@ -32,10 +32,17 @@ export class OutboxService {
           // Enqueue to BullMQ
           // The job payload itself is part of the event payload
           const payload = event.payload as any;
+          const maxAttempts = payload.maxAttempts ?? 3;
+          
           await this.jobsQueue.add(event.type, {
             jobId: payload.jobId,
           }, {
             jobId: payload.jobId, // Use database job ID as BullMQ Job ID for idempotency
+            attempts: maxAttempts,
+            backoff: {
+              type: 'exponential',
+              delay: 2000, // Wait 2s, 4s, 8s...
+            },
           });
 
           // Mark as Dispatched
