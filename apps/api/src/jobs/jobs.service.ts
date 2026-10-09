@@ -3,7 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '@relay/database';
-import { SubmitJobDto, JobStatus } from '@relay/job-contracts';
+import { SubmitJobDto, JobStatus, assertValidTransition } from '@relay/job-contracts';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -108,18 +108,18 @@ export class JobsService {
         throw new BadRequestException(`Cannot cancel job in status ${job.status}`);
       }
 
-      const updatedJob = await tx.job.update({
-        where: { id },
-        data: { status: JobStatus.CANCELLED, completed_at: new Date() },
-      });
+      assertValidTransition(job.status as JobStatus, JobStatus.CANCELLED);
 
       try {
-        // Attempt to remove from BullMQ
-        // This works if the job is waiting or delayed. If active, it will be skipped by the processor check.
         await this.jobsQueue.remove(id);
       } catch (err) {
         this.logger.warn(`Failed to cleanly remove job ${id} from BullMQ: ${err}`);
       }
+
+      const updatedJob = await tx.job.update({
+        where: { id },
+        data: { status: JobStatus.CANCELLED, completed_at: new Date() },
+      });
 
       return updatedJob;
     });

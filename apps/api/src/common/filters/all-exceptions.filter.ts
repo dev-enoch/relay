@@ -7,6 +7,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+    const requestId = (request.headers['x-request-id'] as string | undefined) ?? 'unknown';
 
     const status =
       exception instanceof HttpException
@@ -22,6 +23,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
+      requestId,
       message,
     });
   }

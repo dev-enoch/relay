@@ -29,7 +29,6 @@ export class JobsProcessor extends WorkerHost {
       throw new UnrecoverableError('Invalid state transition');
     }
 
-    // Mark job as PROCESSING
     await this.prisma.job.update({
       where: { id: jobId },
       data: {

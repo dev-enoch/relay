@@ -1,79 +1,96 @@
 # Relay: Reliable Distributed Job Processing Platform
 
-Relay is a production-grade backend job-processing platform designed for high-throughput, reliable asynchronous task execution. It demonstrates advanced backend architecture, distributed systems patterns, and infrastructure engineering best practices.
+Relay is a production-oriented backend job-processing platform for reliable asynchronous task execution. It combines NestJS, PostgreSQL, Redis, and BullMQ to provide a durable workflow for job submission, retries, worker execution, and operational visibility.
 
-## 🚀 Key Features
+## Why this project matters
 
-*   **Transactional Outbox Pattern:** Guarantees at-least-once job dispatch from the primary Postgres database to the Redis message broker, eliminating dual-write inconsistencies.
-*   **Idempotency & Concurrency Control:** Enforces strict idempotency on job submission using a unique composite key (`owner_id` + `idempotency_key`), preventing duplicate executions even under concurrent requests or network retries.
-*   **Robust Background Processing:** Built on top of **BullMQ** for distributed job execution, featuring exponential backoff strategies, maximum retry limits, and dead-letter queue (DLQ) transitions for unrecoverable errors.
-*   **Graceful Shutdown & Data Integrity:** Ensures running workers correctly finish processing or checkpoint their state before exiting when receiving SIGTERM signals, protecting against data corruption during deployments.
-*   **End-to-End Observability:** Tracks granular job attempts, latency metrics, and failure states persistently in the database.
+This project is designed to reflect the patterns that matter in real distributed systems:
 
-## 🛠️ Technology Stack
+- transactional outbox for reliable dispatch
+- idempotent job submission
+- retry and dead-letter handling
+- durable job lifecycle tracking
+- health checks and operational guardrails
+- deployment workflows for real environments
 
-*   **Framework:** [NestJS](https://nestjs.com/) (Node.js) - Providing a modular, enterprise-ready architecture.
-*   **Language:** TypeScript (Strict Mode) - Enforcing type safety and avoiding `any` types.
-*   **Database:** PostgreSQL 16 - Serving as the primary persistent data store.
-*   **ORM:** [Prisma](https://www.prisma.io/) (v6) - Type-safe database client and schema management.
-*   **Message Broker / Queue:** Redis & [BullMQ](https://docs.bullmq.io/) - High-performance background job processing.
-*   **Package Manager:** Yarn
-*   **Testing:** Vitest (E2E API and integration testing)
+## Key capabilities
 
-## 🏗️ Architecture
+- Transactional outbox pattern to bridge Postgres and Redis reliably
+- Idempotent job submission by owner and idempotency key
+- BullMQ-based background processing with retry behavior
+- Job lifecycle tracking from pending to running to success or failure
+- API key authentication for service-level access
+- Observability-friendly health endpoints and response metadata
 
-1.  **Client Application** submits a job via the REST API (`POST /v1/jobs`).
-2.  **API Gateway (Jobs Module)** validates the request, checks for idempotency, and opens a transaction.
-3.  **Database Transaction:** The API writes the `Job` record and an `OutboxEvent` simultaneously to PostgreSQL. If this succeeds, the client gets a `202 Accepted` response.
-4.  **Outbox Poller (Cron):** A scheduled dispatcher reads pending `OutboxEvents` and enqueues them into the BullMQ `jobs-queue`.
-5.  **Job Processor (Worker):** The worker picks up the job, transitions its state in PostgreSQL to `RUNNING`, and simulates the execution workload.
-6.  **Recovery & DLQ:** If the worker crashes or the job fails, BullMQ retries the job using exponential backoff. Non-retryable errors immediately transition the job to a `DEAD_LETTERED` state.
+## Tech stack
 
-## 🚀 Getting Started
+- NestJS
+- TypeScript
+- PostgreSQL
+- Prisma
+- Redis
+- BullMQ
+- Vitest
+- Docker
+
+## Documentation
+
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- [docs/OPERATIONS.md](docs/OPERATIONS.md)
+- [docs/production-hardening.md](docs/production-hardening.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [SECURITY.md](SECURITY.md)
+- [ATTRIBUTIONS.md](ATTRIBUTIONS.md)
+- [LICENSE](LICENSE)
+
+## Quick start
 
 ### Prerequisites
 
-*   Node.js (v20+)
-*   Yarn (v1.22+)
-*   Docker & Docker Compose
+- Node.js 20+
+- Yarn 1.x
+- Docker and Docker Compose
 
-### 1. Start Infrastructure (Postgres & Redis)
+### Start infrastructure
+
 ```bash
 docker-compose up -d
 ```
-*(This starts PostgreSQL on port `5433` and Redis on `6379`)*
 
-### 2. Environment Setup
+### Configure environment
+
 ```bash
 cp .env.example .env
 ```
-Ensure your `DATABASE_URL` matches the running Postgres instance.
 
-### 3. Install Dependencies
+### Install dependencies and initialize the database
+
 ```bash
 yarn install
-```
-
-### 4. Initialize Database Schema
-```bash
 yarn prisma db push
 ```
 
-### 5. Run the Application
+### Run application
+
 ```bash
 yarn start:dev
 ```
-*The API will be available at `http://localhost:3000`.*
 
-### 6. Run E2E Tests
+### Run validation checks
+
 ```bash
+yarn test
 yarn test:e2e
+yarn build
 ```
 
-## 📚 API Endpoints
+## API endpoints
 
-### Submit a Job
-`POST /v1/jobs`
+### Submit a job
+
+POST /v1/jobs
+
 ```json
 {
   "type": "webhook.deliver",
@@ -86,9 +103,38 @@ yarn test:e2e
 }
 ```
 
-### Check Job Status
-`GET /v1/jobs/:id`
+### Get job status
 
-## 👨‍💻 Author
+GET /v1/jobs/:id
 
-Built as a portfolio demonstration for production-level backend engineering.
+### List jobs
+
+GET /v1/jobs?status=PENDING&type=webhook.deliver&limit=20
+
+## Production workflow
+
+The repository includes GitHub Actions for:
+
+- CI validation
+- image release publishing
+- production deployment
+
+See the workflow files in [.github/workflows](.github/workflows).
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
+
+## Security
+
+For vulnerability disclosures, see [SECURITY.md](SECURITY.md).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Standards and governance
+
+- [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+- [SECURITY.md](SECURITY.md)
+- [ATTRIBUTIONS.md](ATTRIBUTIONS.md)

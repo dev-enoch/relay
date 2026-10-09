@@ -4,19 +4,24 @@ export const ValidTransitions: Record<JobStatus, Set<JobStatus>> = {
   [JobStatus.PENDING]: new Set([JobStatus.QUEUED, JobStatus.CANCELLED]),
   [JobStatus.QUEUED]: new Set([JobStatus.RUNNING, JobStatus.CANCELLED]),
   [JobStatus.RUNNING]: new Set([
-    JobStatus.RUNNING, // Allow retry of stalled job
     JobStatus.SUCCEEDED,
     JobStatus.FAILED,
     JobStatus.RETRY_SCHEDULED,
     JobStatus.DEAD_LETTERED,
   ]),
-  [JobStatus.RETRY_SCHEDULED]: new Set([JobStatus.QUEUED, JobStatus.CANCELLED, JobStatus.RUNNING]), // BullMQ can bypass QUEUED if retrying internally
+  [JobStatus.RETRY_SCHEDULED]: new Set([JobStatus.QUEUED, JobStatus.CANCELLED]),
   [JobStatus.SUCCEEDED]: new Set([]),
-  [JobStatus.FAILED]: new Set([JobStatus.RUNNING]), // Allow recovery of crashed job
+  [JobStatus.FAILED]: new Set([]),
   [JobStatus.DEAD_LETTERED]: new Set([]),
   [JobStatus.CANCELLED]: new Set([]),
 };
 
 export function canTransition(from: JobStatus, to: JobStatus): boolean {
   return ValidTransitions[from].has(to);
+}
+
+export function assertValidTransition(from: JobStatus, to: JobStatus): void {
+  if (!canTransition(from, to)) {
+    throw new Error(`Invalid job status transition from ${from} to ${to}`);
+  }
 }
