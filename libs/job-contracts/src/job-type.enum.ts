@@ -1,3 +1,4 @@
 export enum JobType {
-  DEMO_REPORT = 'demo.report',
+  WEBHOOK_DELIVER = 'webhook.deliver',
+  EMAIL_SEND = 'email.send',
 }

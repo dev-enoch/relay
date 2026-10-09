@@ -29,8 +29,8 @@ describe('Jobs API (e2e)', () => {
       .post('/v1/jobs')
       .set('x-api-key', 'demo-secret-key')
       .send({
-        type: 'demo.report',
-        payload: { reportId: '123' },
+        type: 'webhook.deliver',
+        payload: { url: 'https://example.com/webhook', method: 'POST', body: { event: 'user.created' } },
         idempotencyKey: 'test-key-1',
       })
       .expect(201);

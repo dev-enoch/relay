@@ -63,3 +63,14 @@ model OutboxEvent {
 
   @@map("outbox_events")
 }
+
+model ApiKey {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  owner_id    String
+  description String?
+  created_at  DateTime @default(now())
+  is_active   Boolean  @default(true)
+
+  @@map("api_keys")
+}

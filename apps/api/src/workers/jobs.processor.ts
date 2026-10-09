@@ -91,14 +91,39 @@ export class JobsProcessor extends WorkerHost {
   }
 
   private async simulateJobExecution(payload: any) {
-    if (payload && payload.simulateError === 'non-retryable') {
+    if (!payload) return;
+
+    if (payload.type === 'webhook.deliver') {
+      try {
+        const response = await fetch(payload.url, {
+          method: payload.method || 'POST',
+          headers: payload.headers || { 'Content-Type': 'application/json' },
+          body: payload.body ? JSON.stringify(payload.body) : undefined,
+        });
+
+        if (!response.ok) {
+          if (response.status >= 500) {
+            throw new Error(`Webhook failed with status ${response.status} (Retryable)`);
+          } else {
+            throw new UnrecoverableError(`Webhook failed with status ${response.status} (Unrecoverable)`);
+          }
+        }
+        return;
+      } catch (error) {
+        if (error instanceof UnrecoverableError) throw error;
+        // Network errors are retryable
+        throw new Error(`Webhook network failure: ${(error as Error).message}`);
+      }
+    }
+
+    if (payload.simulateError === 'non-retryable') {
       throw new UnrecoverableError('Simulated non-retryable error (Unrecoverable)');
     }
-    if (payload && payload.simulateError === 'retryable') {
+    if (payload.simulateError === 'retryable') {
       throw new Error('Simulated temporary network issue (Retryable)');
     }
 
-    // Basic simulation
+    // Basic simulation for other types
     return new Promise((resolve) => setTimeout(resolve, 1000));
   }
 }

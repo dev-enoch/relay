@@ -76,10 +76,11 @@ yarn test:e2e
 `POST /v1/jobs`
 ```json
 {
-  "type": "video_encoding",
+  "type": "webhook.deliver",
   "payload": {
-    "fileId": "abc-123",
-    "resolution": "1080p"
+    "url": "https://api.example.com/webhooks",
+    "method": "POST",
+    "body": { "event": "user.created" }
   },
   "idempotencyKey": "req_12345"
 }
