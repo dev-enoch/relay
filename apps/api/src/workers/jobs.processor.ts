@@ -18,6 +18,11 @@ export class JobsProcessor extends WorkerHost {
 
     const dbJob = await this.prisma.job.findUnique({ where: { id: jobId } });
     if (!dbJob) throw new UnrecoverableError('Job not found in DB');
+    
+    if (dbJob.status === JobStatus.CANCELLED) {
+      this.logger.log(`Job ${jobId} was cancelled. Skipping.`);
+      return;
+    }
 
     // Mark job as PROCESSING
     await this.prisma.job.update({

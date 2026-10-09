@@ -27,6 +27,7 @@ describe('Jobs API (e2e)', () => {
   it('/v1/jobs (POST) - should submit a job', async () => {
     const response = await request(app.getHttpServer())
       .post('/v1/jobs')
+      .set('x-api-key', 'demo-secret-key')
       .send({
         type: 'demo.report',
         payload: { reportId: '123' },

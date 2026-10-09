@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '@relay/database';
 import { SubmitJobDto, JobStatus } from '@relay/job-contracts';
 import { Prisma } from '@prisma/client';
@@ -7,8 +7,7 @@ import { Prisma } from '@prisma/client';
 export class JobsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async submitJob(dto: SubmitJobDto) {
-    const ownerId = 'default-owner';
+  async submitJob(dto: SubmitJobDto, ownerId: string) {
     
     const existing = await this.prisma.job.findUnique({
       where: {
@@ -63,9 +62,9 @@ export class JobsService {
     }
   }
 
-  async getJob(id: string) {
+  async getJob(id: string, ownerId: string) {
     const job = await this.prisma.job.findUnique({
-      where: { id },
+      where: { id, owner_id: ownerId },
       include: { attempts: true },
     });
     if (!job) {
@@ -74,8 +73,8 @@ export class JobsService {
     return job;
   }
 
-  async listJobs(status?: string, type?: string, limit = 20) {
-    const where: Record<string, unknown> = {};
+  async listJobs(ownerId: string, status?: string, type?: string, limit = 20) {
+    const where: Record<string, unknown> = { owner_id: ownerId };
     if (status) where.status = status;
     if (type) where.type = type;
 
@@ -83,6 +82,34 @@ export class JobsService {
       where,
       take: Math.min(limit, 100),
       orderBy: { created_at: 'desc' },
+    });
+  }
+
+  async cancelJob(id: string, ownerId: string) {
+    return await this.prisma.$transaction(async (tx) => {
+      const job = await tx.job.findUnique({
+        where: { id, owner_id: ownerId },
+      });
+
+      if (!job) {
+        throw new NotFoundException('Job not found');
+      }
+
+      const cancellableStatuses = [JobStatus.PENDING, JobStatus.QUEUED, JobStatus.RETRY_SCHEDULED];
+      if (!cancellableStatuses.includes(job.status as JobStatus)) {
+        throw new BadRequestException(`Cannot cancel job in status ${job.status}`);
+      }
+
+      const updatedJob = await tx.job.update({
+        where: { id },
+        data: { status: JobStatus.CANCELLED, completed_at: new Date() },
+      });
+
+      // We should ideally tell BullMQ to remove it from the queue as well,
+      // but for this MVP, updating the status prevents the worker from processing it
+      // if we also check status in JobsProcessor.
+
+      return updatedJob;
     });
   }
 }
