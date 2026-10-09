@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JobsController } from './jobs.controller.js';
 import { JobsService } from './jobs.service.js';
 import { vitest, describe, beforeEach, it, expect } from 'vitest';
+import { PrismaService } from '@relay/database';
 
 describe('JobsController', () => {
   let controller: JobsController;
@@ -19,6 +20,10 @@ describe('JobsController', () => {
             listJobs: vitest.fn(),
           },
         },
+        {
+          provide: PrismaService,
+          useValue: {},
+        }
       ],
     }).compile();
 

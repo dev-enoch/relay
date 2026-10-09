@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job as BullJob, UnrecoverableError } from 'bullmq';
 import { Logger } from '@nestjs/common';
 import { PrismaService } from '@relay/database';
-import { JobStatus } from '@relay/job-contracts';
+import { JobStatus, canTransition } from '@relay/job-contracts';
 
 @Processor('jobs-queue')
 export class JobsProcessor extends WorkerHost {
@@ -22,6 +22,11 @@ export class JobsProcessor extends WorkerHost {
     if (dbJob.status === JobStatus.CANCELLED) {
       this.logger.log(`Job ${jobId} was cancelled. Skipping.`);
       return;
+    }
+
+    if (!canTransition(dbJob.status as JobStatus, JobStatus.RUNNING)) {
+      this.logger.warn(`Invalid transition from ${dbJob.status} to RUNNING for job ${jobId}`);
+      throw new UnrecoverableError('Invalid state transition');
     }
 
     // Mark job as PROCESSING
@@ -67,8 +72,13 @@ export class JobsProcessor extends WorkerHost {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const isUnrecoverable = error instanceof UnrecoverableError;
       const isFinalAttempt = job.attemptsMade >= (job.opts.attempts || 1);
-      
-      const nextStatus = (isFinalAttempt || isUnrecoverable) ? JobStatus.DEAD_LETTERED : JobStatus.RETRY_SCHEDULED;
+
+      let nextStatus = JobStatus.RETRY_SCHEDULED;
+      if (isUnrecoverable) {
+        nextStatus = JobStatus.FAILED;
+      } else if (isFinalAttempt) {
+        nextStatus = JobStatus.DEAD_LETTERED;
+      }
 
       await this.prisma.$transaction([
         this.prisma.job.update({

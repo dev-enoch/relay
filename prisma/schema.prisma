@@ -8,24 +8,24 @@ datasource db {
 }
 
 model Job {
-  id              String       @id @default(uuid()) @db.Uuid
+  id              String    @id @default(uuid()) @db.Uuid
   type            String
   payload         Json
   status          String
   idempotency_key String
   request_hash    String?
-  attempt_count   Int          @default(0)
+  attempt_count   Int       @default(0)
   max_attempts    Int
-  available_at    DateTime     @default(now())
-  created_at      DateTime     @default(now())
-  updated_at      DateTime     @updatedAt
+  available_at    DateTime  @default(now())
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
   started_at      DateTime?
   completed_at    DateTime?
   last_error_code String?
   owner_id        String?
 
-  attempts        JobAttempt[]
-  outbox_events   OutboxEvent[]
+  attempts      JobAttempt[]
+  outbox_events OutboxEvent[]
 
   @@unique([owner_id, idempotency_key])
   @@map("jobs")
@@ -43,7 +43,7 @@ model JobAttempt {
   error_code          String?
   diagnostic_metadata Json?
 
-  job                 Job       @relation(fields: [job_id], references: [id], onDelete: Cascade)
+  job Job @relation(fields: [job_id], references: [id], onDelete: Cascade)
 
   @@map("job_attempts")
 }
@@ -59,7 +59,7 @@ model OutboxEvent {
   next_retry_at     DateTime?
   last_error_code   String?
 
-  job               Job       @relation(fields: [aggregate_id], references: [id], onDelete: Cascade)
+  job Job @relation(fields: [aggregate_id], references: [id], onDelete: Cascade)
 
   @@map("outbox_events")
 }

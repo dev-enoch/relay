@@ -4,14 +4,15 @@ export const ValidTransitions: Record<JobStatus, Set<JobStatus>> = {
   [JobStatus.PENDING]: new Set([JobStatus.QUEUED, JobStatus.CANCELLED]),
   [JobStatus.QUEUED]: new Set([JobStatus.RUNNING, JobStatus.CANCELLED]),
   [JobStatus.RUNNING]: new Set([
+    JobStatus.RUNNING, // Allow retry of stalled job
     JobStatus.SUCCEEDED,
     JobStatus.FAILED,
     JobStatus.RETRY_SCHEDULED,
     JobStatus.DEAD_LETTERED,
   ]),
-  [JobStatus.RETRY_SCHEDULED]: new Set([JobStatus.QUEUED, JobStatus.CANCELLED]),
+  [JobStatus.RETRY_SCHEDULED]: new Set([JobStatus.QUEUED, JobStatus.CANCELLED, JobStatus.RUNNING]), // BullMQ can bypass QUEUED if retrying internally
   [JobStatus.SUCCEEDED]: new Set([]),
-  [JobStatus.FAILED]: new Set([]),
+  [JobStatus.FAILED]: new Set([JobStatus.RUNNING]), // Allow recovery of crashed job
   [JobStatus.DEAD_LETTERED]: new Set([]),
   [JobStatus.CANCELLED]: new Set([]),
 };

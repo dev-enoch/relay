@@ -13,12 +13,6 @@ export class ApiKeyAuthGuard implements CanActivate {
       throw new UnauthorizedException('Missing API Key');
     }
 
-    // For E2E tests using the demo key, bypass DB check to not break tests
-    if (apiKey === 'demo-secret-key' && process.env.NODE_ENV === 'test') {
-      request.user = { ownerId: 'test-owner' };
-      return true;
-    }
-
     const keyRecord = await this.prisma.apiKey.findUnique({
       where: { key: apiKey },
     });

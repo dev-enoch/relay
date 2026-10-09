@@ -1,11 +1,19 @@
-import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, ConflictException, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { PrismaService } from '@relay/database';
 import { SubmitJobDto, JobStatus } from '@relay/job-contracts';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class JobsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(JobsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @InjectQueue('jobs-queue') private readonly jobsQueue: Queue,
+  ) {}
 
   async submitJob(dto: SubmitJobDto, ownerId: string) {
     
@@ -105,11 +113,44 @@ export class JobsService {
         data: { status: JobStatus.CANCELLED, completed_at: new Date() },
       });
 
-      // We should ideally tell BullMQ to remove it from the queue as well,
-      // but for this MVP, updating the status prevents the worker from processing it
-      // if we also check status in JobsProcessor.
+      try {
+        // Attempt to remove from BullMQ
+        // This works if the job is waiting or delayed. If active, it will be skipped by the processor check.
+        await this.jobsQueue.remove(id);
+      } catch (err) {
+        this.logger.warn(`Failed to cleanly remove job ${id} from BullMQ: ${err}`);
+      }
 
       return updatedJob;
     });
+  }
+
+  // Point 4: Worker crash recovery
+  // Finds jobs stuck in RUNNING state for more than 5 minutes
+  @Cron(CronExpression.EVERY_MINUTE)
+  async recoverStalledJobs() {
+    const stalledThreshold = new Date(Date.now() - 5 * 60 * 1000); // 5 minutes ago
+
+    const stalledJobs = await this.prisma.job.findMany({
+      where: {
+        status: JobStatus.RUNNING,
+        started_at: { lt: stalledThreshold },
+      },
+    });
+
+    if (stalledJobs.length === 0) return;
+
+    this.logger.warn(`Found ${stalledJobs.length} stalled jobs. Recovering...`);
+
+    for (const job of stalledJobs) {
+      await this.prisma.job.update({
+        where: { id: job.id },
+        data: {
+          status: JobStatus.FAILED,
+          last_error_code: 'Worker crashed or stalled during execution',
+        },
+      });
+      this.logger.log(`Recovered stalled job ${job.id} (marked as FAILED)`);
+    }
   }
 }
