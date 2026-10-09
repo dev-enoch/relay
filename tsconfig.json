@@ -20,7 +20,8 @@
     "types": ["vitest/globals", "node"],
     "baseUrl": "./",
     "paths": {
-      "@relay/job-contracts": ["libs/job-contracts/src/index.js"]
+      "@relay/job-contracts": ["libs/job-contracts/src/index.js"],
+      "@relay/database": ["libs/database/src/index.js"]
     }
   }
 }

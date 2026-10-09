@@ -8,7 +8,7 @@ export class SubmitJobDto {
 
   @IsObject()
   @IsNotEmpty()
-  payload!: Record<string, any>;
+  payload!: Record<string, unknown>;
 
   @IsString()
   @IsNotEmpty()
