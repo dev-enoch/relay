@@ -19,6 +19,7 @@ async function bootstrap() {
   );
 
   app.useGlobalFilters(new AllExceptionsFilter());
+  app.enableShutdownHooks();
 
   await app.listen(process.env.PORT ?? 3000);
 }

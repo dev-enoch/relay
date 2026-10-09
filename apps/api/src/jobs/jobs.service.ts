@@ -29,7 +29,7 @@ export class JobsService {
     }
 
     try {
-      const job = await this.prisma.$transaction(async (tx) => {
+      const job = await this.prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         const createdJob = await tx.job.create({
           data: {
             type: dto.type,

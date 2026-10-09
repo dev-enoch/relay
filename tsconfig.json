@@ -19,9 +19,10 @@
     "strictPropertyInitialization": false,
     "types": ["vitest/globals", "node"],
     "baseUrl": "./",
+    "ignoreDeprecations": "6.0",
     "paths": {
-      "@relay/job-contracts": ["libs/job-contracts/src/index.js"],
-      "@relay/database": ["libs/database/src/index.js"]
+      "@relay/job-contracts": ["libs/job-contracts/src/index.ts"],
+      "@relay/database": ["libs/database/src/index.ts"]
     }
   }
 }
