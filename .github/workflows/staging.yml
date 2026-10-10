@@ -1,0 +1,60 @@
+name: Deploy to Staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Image tag to deploy to staging
+        required: true
+        default: latest
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Determine image tag
+        id: image-tag
+        run: |
+          echo "value=${{ github.event.inputs.image_tag }}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.0.1
+        with:
+          host: ${{ secrets.STAGING_SSH_HOST }}
+          username: ${{ secrets.STAGING_SSH_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          port: ${{ secrets.STAGING_SSH_PORT || 22 }}
+          script: |
+            mkdir -p /opt/relay-staging
+            cd /opt/relay-staging
+
+            cat > .env.staging <<'EOF'
+            PORT=3000
+            NODE_ENV=staging
+            DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
+            DATABASE_USER=${{ secrets.STAGING_DATABASE_USER }}
+            DATABASE_PASSWORD=${{ secrets.STAGING_DATABASE_PASSWORD }}
+            DATABASE_NAME=${{ secrets.STAGING_DATABASE_NAME }}
+            REDIS_HOST=${{ secrets.STAGING_REDIS_HOST }}
+            REDIS_PORT=${{ secrets.STAGING_REDIS_PORT }}
+            API_KEY=${{ secrets.STAGING_API_KEY }}
+            EOF
+
+            docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }}
+            docker pull ghcr.io/${{ github.repository_owner }}/relay:${{ steps.image-tag.outputs.value }}
+
+            docker rm -f relay-app-staging || true
+            docker run -d \
+              --name relay-app-staging \
+              --restart unless-stopped \
+              --env-file .env.staging \
+              -p 3001:3000 \
+              ghcr.io/${{ github.repository_owner }}/relay:${{ steps.image-tag.outputs.value }}
+
+            docker image prune -f
+
+      - name: Health check
+        run: |
+          curl --fail --silent http://${{ secrets.STAGING_SSH_HOST }}:3001/health/ready
