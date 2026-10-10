@@ -1,0 +1,124 @@
+{
+  "info": {
+    "name": "Relay API",
+    "description": "Sample Postman collection for the Relay asynchronous job API.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Job",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-api-key",
+            "value": "demo-secret-key"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"webhook.deliver\",\n  \"payload\": {\n    \"url\": \"https://example.com/webhook\",\n    \"method\": \"POST\",\n    \"body\": {\n      \"event\": \"user.created\"\n    }\n  },\n  \"idempotencyKey\": \"user-created-123\"\n}\n"
+        },
+        "url": {
+          "raw": "http://localhost:3000/v1/jobs",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "v1",
+            "jobs"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Job",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "demo-secret-key"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/v1/jobs/{{jobId}}",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "v1",
+            "jobs",
+            "{{jobId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "List Jobs",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "demo-secret-key"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3000/v1/jobs?status=PENDING&limit=20",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "v1",
+            "jobs"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "PENDING"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Health - Ready",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3000/health/ready",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3000",
+          "path": [
+            "health",
+            "ready"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "jobId",
+      "value": "replace-with-job-id"
+    }
+  ]
+}
